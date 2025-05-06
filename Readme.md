@@ -44,18 +44,21 @@ A user-friendly Bash script to **install**, **uninstall**, or **reinstall** [Cur
 ```bash
 curl -O https://raw.githubusercontent.com/kishan2930/setup-cursor-in-ubuntu/main/setupCursor.sh
 ```
+
 ### ✅ Step 2: Make it Executable
 
 ```bash
-chmod +x install_cursor.sh
+chmod +x setupCursor.sh
 ```
 
 ### 🚀 Step 3: Run the Script
 
 ```bash
-./install_cursor.sh
+sudo ./setupCursor.sh
 ```
+
 ## 🧼 To Uninstall Cursor (manually)
+
 ```bash
 sudo rm -f /opt/cursor.appimage
 sudo rm -f /opt/cursor.svg
