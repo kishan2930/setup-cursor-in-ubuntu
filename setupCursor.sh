@@ -28,10 +28,12 @@ JSON=$(curl -s "https://www.cursor.com/api/download?platform=linux-x64&releaseTr
 CURSOR_URL=$(echo "$JSON" | grep -oP '(?<="downloadUrl":")[^"]+')
 LATEST_VERSION=$(echo "$JSON" | grep -oP '(?<="version":")[^"]+')
 DEFAULT_ICON_URL="https://www.cursor.com/favicon.svg"
-ICON_PATH="/opt/cursor.svg"
-APPIMAGE_PATH="/opt/cursor.appimage"
+
+INSTALL_DIR="/opt/cursor"
+APPIMAGE_PATH="$INSTALL_DIR/cursor.appimage"
+ICON_PATH="$INSTALL_DIR/cursor.svg"
+VERSION_FILE="$INSTALL_DIR/version"
 DESKTOP_PATH="/usr/share/applications/cursor.desktop"
-VERSION_FILE="/opt/cursor_version"
 
 get_shell_rc() {
     case "$(basename "$SHELL")" in
@@ -55,11 +57,11 @@ add_cursor_function() {
     SHELL_RC=$(get_shell_rc)
     if ! grep -q "# Cursor launcher" "$SHELL_RC"; then
         echo -e "${CYAN}Adding 'cursor' command to $SHELL_RC...${NC}"
-        cat >> "$SHELL_RC" <<'EOF'
+        cat >> "$SHELL_RC" <<EOF
 
 # Cursor launcher
 function cursor() {
-    /opt/cursor.appimage --no-sandbox "$@" > /dev/null 2>&1 & disown
+    $APPIMAGE_PATH --no-sandbox "\$@" > /dev/null 2>&1 & disown
 }
 EOF
     fi
@@ -73,8 +75,10 @@ remove_cursor_function() {
 
 set_default_icon() {
     echo -e "${CYAN}Setting default icon from Cursor website...${NC}"
+    sudo mkdir -p "$INSTALL_DIR"
     curl -sL "$DEFAULT_ICON_URL" -o /tmp/default_cursor.svg
     sudo mv /tmp/default_cursor.svg "$ICON_PATH"
+    rm -f /tmp/default_cursor.svg
     echo -e "${GREEN}Default icon set at $ICON_PATH${NC}"
 }
 
@@ -88,6 +92,7 @@ update_icon() {
     echo -e "${CYAN}Downloading icon...${NC}"
     curl -sL "$SVG_URL" -o /tmp/custom_cursor.svg
     sudo mv /tmp/custom_cursor.svg "$ICON_PATH"
+    rm -f /tmp/custom_cursor.svg
     echo -e "${GREEN}Icon updated at $ICON_PATH${NC}"
     sudo sed -i "s|^Icon=.*|Icon=$ICON_PATH|" "$DESKTOP_PATH" || true
 }
@@ -95,6 +100,7 @@ update_icon() {
 install_cursor() {
     echo -e "${YELLOW}Installing Cursor...${NC}"
     install_fuse2
+    sudo mkdir -p "$INSTALL_DIR"
     sudo curl -L "$CURSOR_URL" -o "$APPIMAGE_PATH"
     sudo chmod +x "$APPIMAGE_PATH"
     echo "$LATEST_VERSION" | sudo tee "$VERSION_FILE" > /dev/null
@@ -117,7 +123,8 @@ EOF
 
 uninstall_cursor() {
     echo -e "${YELLOW}Uninstalling Cursor...${NC}"
-    sudo rm -f "$APPIMAGE_PATH" "$DESKTOP_PATH" "$ICON_PATH" "$VERSION_FILE"
+    sudo rm -rf "$INSTALL_DIR"
+    sudo rm -f "$DESKTOP_PATH"
     remove_cursor_function
     echo -e "${GREEN}Uninstalled successfully.${NC}"
 }
