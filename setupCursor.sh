@@ -130,12 +130,27 @@ uninstall_cursor() {
 }
 
 update_cursor() {
-    echo -e "${YELLOW}Updating Cursor to version $LATEST_VERSION...${NC}"
-    sudo rm -f "$APPIMAGE_PATH"
-    sudo curl -L "$CURSOR_URL" -o "$APPIMAGE_PATH"
-    sudo chmod +x "$APPIMAGE_PATH"
-    echo "$LATEST_VERSION" | sudo tee "$VERSION_FILE" > /dev/null
-    echo -e "${GREEN}Updated successfully. Icon remains unchanged.${NC}"
+    # Check if Cursor is installed
+    if [ ! -f "$VERSION_FILE" ]; then
+        echo -e "${RED}Cursor is not installed. Please install it first.${NC}"
+        exit 1
+    fi
+    
+    # Read current installed version
+    CURRENT_VERSION=$(cat "$VERSION_FILE")
+    
+    # Compare versions
+    if [ "$CURRENT_VERSION" == "$LATEST_VERSION" ]; then
+        echo -e "${GREEN}Cursor is already up to date (version $CURRENT_VERSION).${NC}"
+        exit 0
+    else
+        echo -e "${YELLOW}Updating Cursor from version ${RED}$CURRENT_VERSION${YELLOW} to ${GREEN}$LATEST_VERSION${YELLOW}...${NC}"
+        sudo rm -f "$APPIMAGE_PATH"
+        sudo curl -L "$CURSOR_URL" -o "$APPIMAGE_PATH"
+        sudo chmod +x "$APPIMAGE_PATH"
+        echo "$LATEST_VERSION" | sudo tee "$VERSION_FILE" > /dev/null
+        echo -e "${GREEN}Updated successfully. Icon remains unchanged.${NC}"
+    fi
 }
 
 # === Menu ===
