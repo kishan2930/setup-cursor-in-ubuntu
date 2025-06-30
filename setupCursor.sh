@@ -100,10 +100,28 @@ update_icon() {
 install_cursor() {
     echo -e "${YELLOW}Installing Cursor...${NC}"
     install_fuse2
+
+    # Create install directory
     sudo mkdir -p "$INSTALL_DIR"
-    sudo curl -L "$CURSOR_URL" -o "$APPIMAGE_PATH"
-    sudo chmod +x "$APPIMAGE_PATH"
-    echo "$LATEST_VERSION" | sudo tee "$VERSION_FILE" > /dev/null
+
+    # Download to temp file
+    TMP_FILE="/tmp/cursor_install.appimage"
+    echo -e "${CYAN}Downloading Cursor AppImage...${NC}"
+    curl -L --fail --retry 3 --connect-timeout 10 "$CURSOR_URL" -o "$TMP_FILE"
+
+    # Validate AppImage
+    if file "$TMP_FILE" | grep -q "ELF 64-bit"; then
+        sudo mv "$TMP_FILE" "$APPIMAGE_PATH"
+        sudo chmod +x "$APPIMAGE_PATH"
+        echo "$LATEST_VERSION" | sudo tee "$VERSION_FILE" > /dev/null
+        echo -e "${GREEN}Cursor AppImage downloaded and installed.${NC}"
+    else
+        echo -e "${RED}Downloaded file is not a valid AppImage. Install aborted.${NC}"
+        rm -f "$TMP_FILE"
+        exit 1
+    fi
+
+    # Set icon
     set_default_icon
 
     echo -e "${CYAN}Creating desktop entry...${NC}"
@@ -118,8 +136,9 @@ EOF
 
     add_cursor_function
 
-    echo -e "${GREEN}Cursor installed successfully! Use 'cursor' to launch.${NC}"
+    echo -e "${GREEN}Cursor installed successfully! Use 'cursor' command or launcher.${NC}"
 }
+
 
 uninstall_cursor() {
     echo -e "${YELLOW}Uninstalling Cursor...${NC}"
@@ -130,28 +149,40 @@ uninstall_cursor() {
 }
 
 update_cursor() {
+    echo -e "${YELLOW}Checking for updates...${NC}"
+
     # Check if Cursor is installed
     if [ ! -f "$VERSION_FILE" ]; then
         echo -e "${RED}Cursor is not installed. Please install it first.${NC}"
         exit 1
     fi
-    
-    # Read current installed version
+
     CURRENT_VERSION=$(cat "$VERSION_FILE")
-    
-    # Compare versions
+
     if [ "$CURRENT_VERSION" == "$LATEST_VERSION" ]; then
         echo -e "${GREEN}Cursor is already up to date (version $CURRENT_VERSION).${NC}"
         exit 0
-    else
-        echo -e "${YELLOW}Updating Cursor from version ${RED}$CURRENT_VERSION${YELLOW} to ${GREEN}$LATEST_VERSION${YELLOW}...${NC}"
-        sudo rm -f "$APPIMAGE_PATH"
-        sudo curl -L "$CURSOR_URL" -o "$APPIMAGE_PATH"
+    fi
+
+    echo -e "${YELLOW}Updating Cursor from ${RED}$CURRENT_VERSION${YELLOW} to ${GREEN}$LATEST_VERSION${YELLOW}...${NC}"
+
+    # Download to temp file first
+    TMP_FILE="/tmp/cursor_update.appimage"
+    curl -L --fail --retry 3 --connect-timeout 10 "$CURSOR_URL" -o "$TMP_FILE"
+
+    # Validate downloaded file is a real AppImage (ELF binary)
+    if file "$TMP_FILE" | grep -q "ELF 64-bit"; then
+        sudo mv "$TMP_FILE" "$APPIMAGE_PATH"
         sudo chmod +x "$APPIMAGE_PATH"
         echo "$LATEST_VERSION" | sudo tee "$VERSION_FILE" > /dev/null
-        echo -e "${GREEN}Updated successfully. Icon remains unchanged.${NC}"
+        echo -e "${GREEN}Update successful. You can now launch Cursor.${NC}"
+    else
+        echo -e "${RED}Downloaded file is not a valid AppImage. Update aborted.${NC}"
+        rm -f "$TMP_FILE"
+        exit 1
     fi
 }
+
 
 # === Menu ===
 echo -e "${CYAN}Choose an option:${NC}"
